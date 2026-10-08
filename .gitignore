@@ -1,0 +1,9 @@
+data/
+*.keras
+*.h5
+tb_logs/
+training_log.csv
+.ipynb_checkpoints/
+__pycache__/
+.venv/
+.DS_Store
