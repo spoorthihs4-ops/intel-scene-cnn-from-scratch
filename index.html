@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Methodology · Intel Scene CNN From Scratch</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#F3F6FB;--panel:#FFFFFF;--ink:#1F2A44;--muted:#5B6478;--line:#D6DDEA;--chip:#EEF2F9;--accent:#D1335B;--res:#F0FAF4;--resline:#16A34A}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111827;--panel:#1B2436;--ink:#E7ECF5;--muted:#A6B0C3;--line:#2E3A52;--chip:#25304A;--res:#173027;--accent:#FF7A97}}
+:root[data-theme="dark"]{--bg:#111827;--panel:#1B2436;--ink:#E7ECF5;--muted:#A6B0C3;--line:#2E3A52;--chip:#25304A;--res:#173027;--accent:#FF7A97}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.5}
+main{max-width:1180px;margin:0 auto;padding:28px 20px 40px}
+h1{font-size:clamp(1.4rem,3vw,2rem);margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 20px;max-width:72ch}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px;overflow-x:auto}
+.chart svg{width:100%;min-width:760px;height:auto;display:block}
+.node{cursor:pointer;transition:opacity .2s,transform .2s;transform-box:fill-box;transform-origin:center}
+.node:hover{transform:translateY(-2px)}
+.node:focus{outline:none}
+.node:focus-visible > g rect,.node.active > g rect{stroke-width:4}
+.chart.has-active .node:not(.active){opacity:.45}
+aside{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 26px;max-width:880px}
+aside h2{margin:0 0 4px;font-size:1.25rem;display:flex;gap:10px;align-items:center}
+.dot{width:32px;height:32px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-size:.85rem;font-weight:700;flex:none}
+aside h3{font-size:.95rem;margin:16px 0 4px}
+aside p{margin:0;color:var(--muted);max-width:75ch}
+.result{margin-top:16px;background:var(--res);border-left:4px solid var(--resline);border-radius:8px;padding:10px 14px}
+.result p{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips span{background:var(--chip);border-radius:999px;padding:3px 10px;font-size:.82rem}
+.nb{display:inline-block;margin-top:16px;font-size:.9rem;color:var(--accent);font-weight:600;text-decoration:none}
+.nb:hover{text-decoration:underline}
+.nav{display:flex;gap:8px;margin-top:18px;max-width:420px}
+.nav button{flex:1;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:10px;padding:8px;font:inherit;cursor:pointer}
+.nav button:disabled{opacity:.45;cursor:default}
+.nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{color:var(--muted);font-size:.9rem;margin-top:12px}
+@media (prefers-reduced-motion:reduce){.node{transition:none}.node:hover{transform:none}}
+</style></head>
+<body><main>
+<h1>How the scene classifier was built from scratch</h1>
+<p class="sub">Ten stages take 17,034 labelled photos to a custom CNN that reaches 89.0% test accuracy without any pretrained weights. Select any stage to see what it does, why it matters, the result it produced and the techniques behind it.</p>
+<div class="chart" id="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="20 85 1160 610" role="img" aria-label="Methodology flowchart" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B6478"/></marker>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1F2A44" flood-opacity="0.18"/></filter>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6F8FC"/><stop offset="1" stop-color="#EEF3FB"/></linearGradient></defs>
+
+
+<g class="node" data-n="1" tabindex="0" role="button" aria-label="Stage 1 details">
+<g filter="url(#sh)"><rect x="40.0" y="105" width="260.5" height="130" rx="14" fill="#fff" stroke="#2B59C3" stroke-width="2"/></g>
+<path d="M40.0,119 a14,14 0 0 1 14,-14 h232.5 a14,14 0 0 1 14,14 v30 h-260.5 z" fill="#2B59C3"/>
+<circle cx="64.0" cy="127" r="13" fill="#fff"/><text x="64.0" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#2B59C3">1</text>
+<text x="86.0" y="133" font-size="16" font-weight="700" fill="#fff">Problem &amp; EDA</text>
+<circle cx="60.0" cy="167" r="3.5" fill="#2B59C3"/><text x="72.0" y="171" font-size="13.5" fill="#2B3245">6 scene classes</text>
+<circle cx="60.0" cy="189" r="3.5" fill="#2B59C3"/><text x="72.0" y="193" font-size="13.5" fill="#2B3245">17,034 labelled images</text>
+<circle cx="60.0" cy="211" r="3.5" fill="#2B59C3"/><text x="72.0" y="215" font-size="13.5" fill="#2B3245">Balance, size, colour EDA</text>
+</g>
+<g class="node" data-n="2" tabindex="0" role="button" aria-label="Stage 2 details">
+<g filter="url(#sh)"><rect x="326.5" y="105" width="260.5" height="130" rx="14" fill="#fff" stroke="#0E9384" stroke-width="2"/></g>
+<path d="M326.5,119 a14,14 0 0 1 14,-14 h232.5 a14,14 0 0 1 14,14 v30 h-260.5 z" fill="#0E9384"/>
+<circle cx="350.5" cy="127" r="13" fill="#fff"/><text x="350.5" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#0E9384">2</text>
+<text x="372.5" y="133" font-size="16" font-weight="700" fill="#fff">Stratified split</text>
+<circle cx="346.5" cy="167" r="3.5" fill="#0E9384"/><text x="358.5" y="171" font-size="13.5" fill="#2B3245">Train 11,928</text>
+<circle cx="346.5" cy="189" r="3.5" fill="#0E9384"/><text x="358.5" y="193" font-size="13.5" fill="#2B3245">Validation 2,106</text>
+<circle cx="346.5" cy="211" r="3.5" fill="#0E9384"/><text x="358.5" y="215" font-size="13.5" fill="#2B3245">Test 3,000 (held out)</text>
+</g>
+<path d="M303.5,170 H321.5" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="3" tabindex="0" role="button" aria-label="Stage 3 details">
+<g filter="url(#sh)"><rect x="613.0" y="105" width="260.5" height="130" rx="14" fill="#fff" stroke="#7A4FD1" stroke-width="2"/></g>
+<path d="M613.0,119 a14,14 0 0 1 14,-14 h232.5 a14,14 0 0 1 14,14 v30 h-260.5 z" fill="#7A4FD1"/>
+<circle cx="637.0" cy="127" r="13" fill="#fff"/><text x="637.0" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#7A4FD1">3</text>
+<text x="659.0" y="133" font-size="16" font-weight="700" fill="#fff">tf.data pipeline</text>
+<circle cx="633.0" cy="167" r="3.5" fill="#7A4FD1"/><text x="645.0" y="171" font-size="13.5" fill="#2B3245">Flips · zoom · colour jitter</text>
+<circle cx="633.0" cy="189" r="3.5" fill="#7A4FD1"/><text x="645.0" y="193" font-size="13.5" fill="#2B3245">Random erasing (cutout)</text>
+<circle cx="633.0" cy="211" r="3.5" fill="#7A4FD1"/><text x="645.0" y="215" font-size="13.5" fill="#2B3245">Parallel map + prefetch</text>
+</g>
+<path d="M590.0,170 H608.0" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="4" tabindex="0" role="button" aria-label="Stage 4 details">
+<g filter="url(#sh)"><rect x="899.5" y="105" width="260.5" height="130" rx="14" fill="#fff" stroke="#B5338A" stroke-width="2"/></g>
+<path d="M899.5,119 a14,14 0 0 1 14,-14 h232.5 a14,14 0 0 1 14,14 v30 h-260.5 z" fill="#B5338A"/>
+<circle cx="923.5" cy="127" r="13" fill="#fff"/><text x="923.5" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#B5338A">4</text>
+<text x="945.5" y="133" font-size="16" font-weight="700" fill="#fff">MixUp &amp; CutMix</text>
+<circle cx="919.5" cy="167" r="3.5" fill="#B5338A"/><text x="931.5" y="171" font-size="13.5" fill="#2B3245">Batch-level blending</text>
+<circle cx="919.5" cy="189" r="3.5" fill="#B5338A"/><text x="931.5" y="193" font-size="13.5" fill="#2B3245">Soft labels (α = 0.3)</text>
+<circle cx="919.5" cy="211" r="3.5" fill="#B5338A"/><text x="931.5" y="215" font-size="13.5" fill="#2B3245">Stronger regularisation</text>
+</g>
+<path d="M876.5,170 H894.5" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="5" tabindex="0" role="button" aria-label="Stage 5 details">
+<g filter="url(#sh)"><rect x="40.0" y="325" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#E25A1C" stroke-width="2"/></g>
+<path d="M40.0,339 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#E25A1C"/>
+<circle cx="64.0" cy="347" r="13" fill="#fff"/><text x="64.0" y="352" text-anchor="middle" font-size="14" font-weight="700" fill="#E25A1C">5</text>
+<text x="86.0" y="353" font-size="16" font-weight="700" fill="#fff">DeepSceneNet CNN</text>
+<circle cx="60.0" cy="387" r="3.5" fill="#E25A1C"/><text x="72.0" y="391" font-size="13.5" fill="#2B3245">Residual blocks · 4 stages</text>
+<circle cx="60.0" cy="409" r="3.5" fill="#E25A1C"/><text x="72.0" y="413" font-size="13.5" fill="#2B3245">SE + spatial attention</text>
+<circle cx="60.0" cy="431" r="3.5" fill="#E25A1C"/><text x="72.0" y="435" font-size="13.5" fill="#2B3245">13.1 M params, from scratch</text>
+</g>
+<g class="node" data-n="6" tabindex="0" role="button" aria-label="Stage 6 details">
+<g filter="url(#sh)"><rect x="423.3333333333333" y="325" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#D99A06" stroke-width="2"/></g>
+<path d="M423.3333333333333,339 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#D99A06"/>
+<circle cx="447.3333333333333" cy="347" r="13" fill="#fff"/><text x="447.3333333333333" y="352" text-anchor="middle" font-size="14" font-weight="700" fill="#D99A06">6</text>
+<text x="469.3333333333333" y="353" font-size="16" font-weight="700" fill="#fff">Training recipe</text>
+<circle cx="443.3333333333333" cy="387" r="3.5" fill="#D99A06"/><text x="455.3333333333333" y="391" font-size="13.5" fill="#2B3245">Cosine LR + warmup</text>
+<circle cx="443.3333333333333" cy="409" r="3.5" fill="#D99A06"/><text x="455.3333333333333" y="413" font-size="13.5" fill="#2B3245">Label smoothing 0.1 · AdamW</text>
+<circle cx="443.3333333333333" cy="431" r="3.5" fill="#D99A06"/><text x="455.3333333333333" y="435" font-size="13.5" fill="#2B3245">Mixed precision on T4</text>
+</g>
+<path d="M396.3333333333333,390 H418.3333333333333" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="7" tabindex="0" role="button" aria-label="Stage 7 details">
+<g filter="url(#sh)"><rect x="806.6666666666666" y="325" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#1D7A8C" stroke-width="2"/></g>
+<path d="M806.6666666666666,339 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#1D7A8C"/>
+<circle cx="830.6666666666666" cy="347" r="13" fill="#fff"/><text x="830.6666666666666" y="352" text-anchor="middle" font-size="14" font-weight="700" fill="#1D7A8C">7</text>
+<text x="852.6666666666666" y="353" font-size="16" font-weight="700" fill="#fff">3-phase training</text>
+<circle cx="826.6666666666666" cy="387" r="3.5" fill="#1D7A8C"/><text x="838.6666666666666" y="391" font-size="13.5" fill="#2B3245">LR 1e-3 → 2e-4 → 5e-5</text>
+<circle cx="826.6666666666666" cy="409" r="3.5" fill="#1D7A8C"/><text x="838.6666666666666" y="413" font-size="13.5" fill="#2B3245">Checkpoint + early stopping</text>
+<circle cx="826.6666666666666" cy="431" r="3.5" fill="#1D7A8C"/><text x="838.6666666666666" y="435" font-size="13.5" fill="#2B3245">Best val accuracy 90.6 %</text>
+</g>
+<path d="M779.6666666666666,390 H801.6666666666666" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="8" tabindex="0" role="button" aria-label="Stage 8 details">
+<g filter="url(#sh)"><rect x="40.0" y="545" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#D1335B" stroke-width="2"/></g>
+<path d="M40.0,559 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#D1335B"/>
+<circle cx="64.0" cy="567" r="13" fill="#fff"/><text x="64.0" y="572" text-anchor="middle" font-size="14" font-weight="700" fill="#D1335B">8</text>
+<text x="86.0" y="573" font-size="16" font-weight="700" fill="#fff">Evaluate</text>
+<circle cx="60.0" cy="607" r="3.5" fill="#D1335B"/><text x="72.0" y="611" font-size="13.5" fill="#2B3245">Test accuracy 89.0 %</text>
+<circle cx="60.0" cy="629" r="3.5" fill="#D1335B"/><text x="72.0" y="633" font-size="13.5" fill="#2B3245">Top-2 accuracy 97.4 %</text>
+<circle cx="60.0" cy="651" r="3.5" fill="#D1335B"/><text x="72.0" y="655" font-size="13.5" fill="#2B3245">TTA compared (88.7 %)</text>
+</g>
+<g class="node" data-n="9" tabindex="0" role="button" aria-label="Stage 9 details">
+<g filter="url(#sh)"><rect x="423.3333333333333" y="545" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#16A34A" stroke-width="2"/></g>
+<path d="M423.3333333333333,559 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#16A34A"/>
+<circle cx="447.3333333333333" cy="567" r="13" fill="#fff"/><text x="447.3333333333333" y="572" text-anchor="middle" font-size="14" font-weight="700" fill="#16A34A">9</text>
+<text x="469.3333333333333" y="573" font-size="16" font-weight="700" fill="#fff">Errors &amp; Grad-CAM</text>
+<circle cx="443.3333333333333" cy="607" r="3.5" fill="#16A34A"/><text x="455.3333333333333" y="611" font-size="13.5" fill="#2B3245">Confusion · ROC · PR</text>
+<circle cx="443.3333333333333" cy="629" r="3.5" fill="#16A34A"/><text x="455.3333333333333" y="633" font-size="13.5" fill="#2B3245">Glacier ↔ mountain = 38 %</text>
+<circle cx="443.3333333333333" cy="651" r="3.5" fill="#16A34A"/><text x="455.3333333333333" y="655" font-size="13.5" fill="#2B3245">Grad-CAM heatmaps</text>
+</g>
+<path d="M396.3333333333333,610 H418.3333333333333" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<g class="node" data-n="10" tabindex="0" role="button" aria-label="Stage 10 details">
+<g filter="url(#sh)"><rect x="806.6666666666666" y="545" width="353.3333333333333" height="130" rx="14" fill="#fff" stroke="#1F2A44" stroke-width="2"/></g>
+<path d="M806.6666666666666,559 a14,14 0 0 1 14,-14 h325.3333333333333 a14,14 0 0 1 14,14 v30 h-353.3333333333333 z" fill="#1F2A44"/>
+<circle cx="830.6666666666666" cy="567" r="13" fill="#fff"/><text x="830.6666666666666" y="572" text-anchor="middle" font-size="12" font-weight="700" fill="#1F2A44">10</text>
+<text x="852.6666666666666" y="573" font-size="16" font-weight="700" fill="#fff">Reproducibility</text>
+<circle cx="826.6666666666666" cy="607" r="3.5" fill="#1F2A44"/><text x="838.6666666666666" y="611" font-size="13.5" fill="#2B3245">Fixed seed · deterministic ops</text>
+<circle cx="826.6666666666666" cy="629" r="3.5" fill="#1F2A44"/><text x="838.6666666666666" y="633" font-size="13.5" fill="#2B3245">Single CFG dictionary</text>
+<circle cx="826.6666666666666" cy="651" r="3.5" fill="#1F2A44"/><text x="838.6666666666666" y="655" font-size="13.5" fill="#2B3245">JSON results + logs</text>
+</g>
+<path d="M779.6666666666666,610 H801.6666666666666" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1029.75,235 V280 H216.66666666666666" fill="none" stroke="#5B6478" stroke-width="2.2"/>
+<path d="M216.66666666666666,280 V319" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M983.3333333333333,455 V500 H216.66666666666666" fill="none" stroke="#5B6478" stroke-width="2.2"/>
+<path d="M216.66666666666666,500 V539" fill="none" stroke="#5B6478" stroke-width="2.2" marker-end="url(#ah)"/>
+</svg></div>
+<aside id="panel" aria-live="polite"></aside>
+<p class="hint">Tip: use Tab and Enter, or the left and right arrow keys, to step through the stages.</p>
+</main>
+<script>
+const D={"1": {"t": "Problem and EDA", "what": "Define a 6-class scene task (buildings, forest, glacier, mountain, sea, street) and explore 17,034 labelled Intel images: class counts, raw samples, image sizes and per-class colour profiles.", "why": "Knowing that classes are balanced and that glacier, mountain and sea share colours tells us which errors to expect and which metrics are meaningful.", "res": "14,034 training and 3,000 test images; imbalance only 1.15x, so accuracy is a fair headline metric.", "tech": ["pandas", "PIL", "matplotlib", "seaborn"], "nb": "01_problem_definition_and_eda"}, "2": {"t": "Stratified split", "what": "Hold out 15% of the training folder as a validation set with StratifiedShuffleSplit and keep the official test folder untouched until the end.", "why": "Checkpoints and early stopping are driven by validation data, so the test score stays an honest estimate.", "res": "Train 11,928 / validation 2,106 / test 3,000 with class proportions preserved.", "tech": ["StratifiedShuffleSplit", "fixed seed 42"], "nb": "02_preprocessing_and_augmentation"}, "3": {"t": "tf.data pipeline", "what": "Decode and resize to 150x150, then apply flips, random zoom, colour jitter and random erasing in parallel, normalise to [0, 1] and prefetch batches of 128.", "why": "Training from scratch needs heavy augmentation to avoid overfitting, and a parallel pipeline keeps the GPU busy.", "res": "93 training steps per epoch with on-the-fly augmentation; validation and test use clean images only.", "tech": ["tf.data", "AUTOTUNE", "random erasing", "colour jitter"], "nb": "02_preprocessing_and_augmentation"}, "4": {"t": "MixUp and CutMix", "what": "Blend pairs of images (MixUp) or paste patches between them (CutMix) at batch level, with soft labels in proportion to the mix.", "why": "Mixed samples stop the network from becoming over-confident and force it to use the whole scene rather than one shortcut feature.", "res": "Training accuracy stays below validation accuracy throughout, a sign the regularisation is working rather than the model underfitting.", "tech": ["MixUp", "CutMix", "soft labels, alpha 0.3"], "nb": "02_preprocessing_and_augmentation"}, "5": {"t": "DeepSceneNet CNN", "what": "A custom residual network: a convolutional stem, four residual stages (64 to 512 filters) with Squeeze-and-Excitation channel attention, CBAM-style spatial attention, global pooling and a regularised dense head.", "why": "Residual connections let a deep network train from scratch, and attention helps it focus on the parts of a scene that identify it.", "res": "13,144,024 parameters, all trained from random initialisation, with no pretrained weights.", "tech": ["Keras functional API", "residual blocks", "SE attention", "spatial attention"], "nb": "03_model_architecture"}, "6": {"t": "Training recipe", "what": "A custom learning-rate schedule (linear warmup then cosine annealing), label-smoothed cross-entropy, AdamW with weight decay, L2 and dropout, and mixed-precision training on a Tesla T4.", "why": "Warmup prevents early instability, label smoothing reduces over-confidence, and mixed precision roughly halves memory use and speeds up training.", "res": "About 75 seconds per epoch on a T4 GPU for 11,928 images at batch size 128.", "tech": ["custom LearningRateSchedule", "LabelSmoothingCCE", "AdamW", "mixed_float16"], "nb": "04_training"}, "7": {"t": "Three-phase training", "what": "Train in three phases with decreasing learning rates (1e-3, 2e-4, 5e-5), reloading the best checkpoint before each phase, with early stopping, TensorBoard and CSV logging.", "why": "Each phase refines the previous best weights at a gentler learning rate, squeezing out accuracy without overshooting.", "res": "Validation accuracy 83.9% after phase 1, 90.55% after phase 2 and a best of 90.60% after phase 3.", "tech": ["ModelCheckpoint", "EarlyStopping", "TensorBoard", "CSVLogger"], "nb": "04_training"}, "8": {"t": "Evaluate", "what": "Score the best checkpoint on the 3,000 held-out test images, compute top-2 accuracy, and compare with 10-pass test-time augmentation.", "why": "The held-out test set gives the honest final number, and testing TTA shows whether extra inference cost pays off.", "res": "Test accuracy 89.03% and top-2 accuracy 97.37%. TTA gave 88.70%, so the standard prediction is reported.", "tech": ["model.evaluate", "top-k accuracy", "test-time augmentation"], "nb": "05_evaluation_and_explainability"}, "9": {"t": "Errors and Grad-CAM", "what": "Analyse the classification report, confusion matrices, one-vs-rest ROC and precision-recall curves, the most confident mistakes, and Grad-CAM heatmaps of where the network looks.", "why": "Knowing which classes are confused, and why, points to the next improvement and shows the model focuses on sensible regions.", "res": "339 errors (11.3%); glacier and mountain confusions are 38% of them and buildings and street another 20%. Forest recall is 98.7%.", "tech": ["confusion matrix", "ROC / PR curves", "Grad-CAM", "OpenCV"], "nb": "05_evaluation_and_explainability"}, "10": {"t": "Reproducibility", "what": "Fix seeds for Python, NumPy and TensorFlow, enable deterministic ops, keep every hyper-parameter in one CFG dictionary, and save results, logs and the checkpoint.", "why": "Anyone can rerun the notebook and get the same configuration and comparable numbers.", "res": "Seed 42, all settings and final metrics exported to results_summary.json, plus training_log.csv and TensorBoard logs.", "tech": ["seed control", "TF_DETERMINISTIC_OPS", "JSON export"], "nb": "05_evaluation_and_explainability"}};
+const C={"1": "#2B59C3", "2": "#0E9384", "3": "#7A4FD1", "4": "#B5338A", "5": "#E25A1C", "6": "#D99A06", "7": "#1D7A8C", "8": "#D1335B", "9": "#16A34A", "10": "#1F2A44"};
+const REPO="https://github.com/spoorthihs4-ops/intel-scene-cnn-from-scratch/blob/main/";
+const chart=document.getElementById("chart"),panel=document.getElementById("panel");
+const N=Object.keys(D).length;let cur=1;
+function show(n){
+  cur=n;const d=D[n];
+  document.querySelectorAll(".node").forEach(g=>g.classList.toggle("active",+g.dataset.n===n));
+  chart.classList.add("has-active");
+  panel.innerHTML=`<h2><span class="dot" style="background:${C[n]}">${n}</span>${d.t}</h2>
+  <h3>What happens</h3><p>${d.what}</p>
+  <h3>Why it matters</h3><p>${d.why}</p>
+  <div class="result"><h3 style="margin-top:0">Result</h3><p>${d.res}</p></div>
+  <h3>Techniques</h3><div class="chips">${d.tech.map(t=>`<span>${t}</span>`).join("")}</div>
+  <a class="nb" href="${REPO+d.nb}.ipynb" target="_blank" rel="noopener">Open notebook ${d.nb.slice(0,2)} on GitHub</a>
+  <div class="nav"><button id="prev" ${n===1?"disabled":""}>Previous stage</button><button id="next" ${n===N?"disabled":""}>Next stage</button></div>`;
+  document.getElementById("prev").onclick=()=>show(Math.max(1,n-1));
+  document.getElementById("next").onclick=()=>show(Math.min(N,n+1));
+}
+document.querySelectorAll(".node").forEach(g=>{
+  g.addEventListener("click",()=>show(+g.dataset.n));
+  g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();show(+g.dataset.n);}});
+});
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="BUTTON")return;
+  if(e.key==="ArrowRight")show(Math.min(N,cur+1));
+  if(e.key==="ArrowLeft")show(Math.max(1,cur-1));
+});
+show(1);
+</script></body></html>

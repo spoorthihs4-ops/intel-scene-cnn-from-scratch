@@ -23,7 +23,7 @@ How far can a convolutional network go on natural-scene photos **without any pre
 
 ## Methodology
 
-![Methodology flowchart](reports/figures/methodology_flowchart.png)
+![Methodology flowchart](methodology_flowchart.png)
 
 **[Explore the interactive methodology](https://spoorthihs4-ops.github.io/intel-scene-cnn-from-scratch/)** – click any stage to see what it does, why it matters, the result it produced and the techniques behind it.
 
@@ -74,12 +74,12 @@ flowchart TB
 - **Small generalisation gap:** best validation accuracy 90.60 % vs 89.03 % on test.
 
 <p align="center">
-  <img src="reports/figures/training_curves.png" width="49%" alt="Training curves">
-  <img src="reports/figures/confusion_matrix.png" width="49%" alt="Confusion matrices">
+  <img src="training_curves.png" width="49%" alt="Training curves">
+  <img src="confusion_matrix.png" width="49%" alt="Confusion matrices">
 </p>
 <p align="center">
-  <img src="reports/figures/roc_curves.png" width="40%" alt="ROC curves">
-  <img src="reports/figures/gradcam_grid.jpg" width="40%" alt="Grad-CAM heatmaps">
+  <img src="roc_curves.png" width="40%" alt="ROC curves">
+  <img src="gradcam_grid.jpg" width="40%" alt="Grad-CAM heatmaps">
 </p>
 
 ### Next steps to pass 90 %
@@ -90,31 +90,30 @@ Train at a higher resolution than 150 px, run longer cosine cycles, ensemble sev
 
 | Notebook | Contents |
 |---|---|
-| [`00_full_pipeline_run_all`](notebooks/00_full_pipeline_run_all.ipynb) | **Everything, top to bottom - run this to reproduce** |
-| [`01_problem_definition_and_eda`](notebooks/01_problem_definition_and_eda.ipynb) | Task, setup and configuration, dataset checks, exploratory analysis |
-| [`02_preprocessing_and_augmentation`](notebooks/02_preprocessing_and_augmentation.ipynb) | Stratified split, tf.data pipeline, MixUp and CutMix, augmentation visuals |
-| [`03_model_architecture`](notebooks/03_model_architecture.ipynb) | DeepSceneNet: residual blocks, SE and spatial attention, architecture diagram |
-| [`04_training`](notebooks/04_training.ipynb) | Cosine-warmup schedule, label-smoothed loss, callbacks, three training phases, curves |
-| [`05_evaluation_and_explainability`](notebooks/05_evaluation_and_explainability.ipynb) | Test metrics, TTA, reports, confusion matrices, ROC/PR, error analysis, Grad-CAM, reproducibility |
+| [`00_full_pipeline_run_all`](00_full_pipeline_run_all.ipynb) | **Everything, top to bottom - run this to reproduce** |
+| [`01_problem_definition_and_eda`](01_problem_definition_and_eda.ipynb) | Task, setup and configuration, dataset checks, exploratory analysis |
+| [`02_preprocessing_and_augmentation`](02_preprocessing_and_augmentation.ipynb) | Stratified split, tf.data pipeline, MixUp and CutMix, augmentation visuals |
+| [`03_model_architecture`](03_model_architecture.ipynb) | DeepSceneNet: residual blocks, SE and spatial attention, architecture diagram |
+| [`04_training`](04_training.ipynb) | Cosine-warmup schedule, label-smoothed loss, callbacks, three training phases, curves |
+| [`05_evaluation_and_explainability`](05_evaluation_and_explainability.ipynb) | Test metrics, TTA, reports, confusion matrices, ROC/PR, error analysis, Grad-CAM, reproducibility |
 
 The part notebooks keep the executed outputs for reading; large photo outputs were saved as JPEG so they render on GitHub.
 
 ## Reproduce
 
-1. Open [`00_full_pipeline_run_all.ipynb`](notebooks/00_full_pipeline_run_all.ipynb) on **Kaggle** with a **GPU T4** accelerator.
+1. Open [`00_full_pipeline_run_all.ipynb`](00_full_pipeline_run_all.ipynb) on **Kaggle** with a **GPU T4** accelerator.
 2. Add the dataset [Intel Image Classification](https://www.kaggle.com/datasets/puneet6060/intel-image-classification) as input; the notebook auto-detects `seg_train` and `seg_test`.
 3. **Run All.** Training takes about 75 seconds per epoch on a T4.
 
 ## Repository structure
 
-```
-intel-scene-cnn-from-scratch/
-├── notebooks/            # 00 full pipeline + 01-05 part notebooks (with outputs)
-├── reports/figures/      # methodology flowchart and result charts
-├── docs/index.html       # interactive methodology (GitHub Pages)
-├── requirements.txt
-└── README.md
-```
+All files sit in the repository root so they upload and display correctly:
+
+- `00_full_pipeline_run_all.ipynb` – the complete pipeline (run this to reproduce)
+- `01_…` onwards – part notebooks with executed outputs
+- `methodology_flowchart.png` and the result charts shown above
+- `index.html` – interactive methodology page (GitHub Pages)
+- `requirements.txt`, `.gitignore`
 
 ## Author
 
